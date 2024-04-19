@@ -31,10 +31,11 @@ class AuthController {
         return "Weak Password";
       } else if (e.code == "email-already-in-use") {
         return "email-already-in-use";
+      }else{
+        return "Something went wrong";
       }
     }
 
-    return "Something went wrong";
   }
 
   Future<String> signinUser(

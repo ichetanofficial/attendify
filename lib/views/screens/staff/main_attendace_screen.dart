@@ -11,6 +11,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainAttendanceScrren extends StatefulWidget {
   String subject;
@@ -28,7 +29,7 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
   String generatedOTP = '';
   String subGeneratedOTP = '';
   String todaysDate = '';
-  int timeLeft = 15, attendies = 0;
+  int timeLeft = 15, attendies = 0, flag = 0;
   late Timer _timer;
   TextEditingController _branchController = TextEditingController();
   TextEditingController _semController = TextEditingController();
@@ -262,7 +263,7 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
     });
   }
 
-  void generateOTPProcessor() {
+  Future<void> generateOTPProcessor() async {
     if (_branchController.text.trim().isEmpty) {
       disp.toast("Branch cannot be empty");
     } else if (_semController.text.trim().isEmpty) {
@@ -273,7 +274,6 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
       branch = _branchController.text.trim();
       sem = _semController.text.trim();
       div = _divController.text.trim();
-
       final branchCollectionRef = firestore
           .collection("admin")
           .doc("branches")
@@ -301,7 +301,6 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
               });
 
               _startCountDown();
-              setMAP();
               break;
             }
           }
@@ -328,9 +327,16 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
         .collection(widget.subject)
         .doc(formattedDate);
 
-    db.set({
-      "count": "1",
-      "rollNos": {"0": "1"},
+    db.snapshots().listen((DocumentSnapshot snapshot) {
+      if (snapshot.exists) {
+      } else {
+        db.set({
+          "count": "1",
+          "rollNos": {"0": "1"},
+        });
+      }
+    }, onError: (error) {
+      print("Error fetching document: $error");
     });
   }
 
@@ -454,6 +460,7 @@ class _MainAttendanceScrrenState extends State<MainAttendanceScrren> {
         .doc(div)
         .collection(widget.subject)
         .doc(formattedDate);
+
     var docRef = firestore
         .collection("attendance")
         .doc(branch)

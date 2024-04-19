@@ -31,6 +31,7 @@ class _GiveAttendancePageState extends State<GiveAttendancePage> {
   final pinController = TextEditingController();
   final focusNode = FocusNode();
   final formKey = GlobalKey<FormState>();
+  bool isOutFocus = true;
   String? username;
   DisplayToast disp = DisplayToast();
 
@@ -59,6 +60,8 @@ class _GiveAttendancePageState extends State<GiveAttendancePage> {
   void initState() {
     super.initState();
     initialSetup();
+    alwaysChecks();
+    focusNode.addListener(_onFocusChanged);
   }
 
   @override
@@ -138,10 +141,6 @@ class _GiveAttendancePageState extends State<GiveAttendancePage> {
               "$remTime",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            Text(
-              "${widget.otpNum}",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
           ],
         ),
       ),
@@ -151,7 +150,6 @@ class _GiveAttendancePageState extends State<GiveAttendancePage> {
   void initialSetup() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     username = prefs.getString("username");
-    print(">>>>>>>>>>>>>>>>>>>>>>>>USERNAME:$username");
 
     DatabaseReference timeRef = FirebaseDatabase.instance.ref(
         "time/${widget.branch}/${widget.sem}/${widget.div}/${widget.subject}");
@@ -172,36 +170,89 @@ class _GiveAttendancePageState extends State<GiveAttendancePage> {
     if (pinController.text.trim().toString() == widget.otpNum) {
       int remainingTime = int.tryParse(remTime) ?? 0;
       if (remainingTime > 0) {
-        var now = DateTime.now();
-        var formatter = DateFormat('yyyy-MM-dd');
-        String formattedDate = formatter.format(now);
+        if (isOutFocus) {
+          var now = DateTime.now();
+          var formatter = DateFormat('yyyy-MM-dd');
+          String formattedDate = formatter.format(now);
 
-        var attendanceRef = firestore
-            .collection("attendance")
-            .doc(widget.branch)
-            .collection(widget.sem!)
-            .doc(widget.div)
-            .collection(widget.subject!)
-            .doc(formattedDate);
+          var attendanceRef = firestore
+              .collection("attendance")
+              .doc(widget.branch)
+              .collection(widget.sem!)
+              .doc(widget.div)
+              .collection(widget.subject!)
+              .doc(formattedDate);
 
-        await firestore.runTransaction((transaction) async {
-          DocumentSnapshot snapshot = await transaction.get(attendanceRef);
+          await firestore.runTransaction((transaction) async {
+            DocumentSnapshot snapshot = await transaction.get(attendanceRef);
 
-          Map<String, dynamic> updateData = {};
-          if (snapshot.exists) {
-            updateData = snapshot.data()! as Map<String, dynamic>;
-          }
+            Map<String, dynamic> updateData = {};
+            if (snapshot.exists) {
+              updateData = snapshot.data()! as Map<String, dynamic>;
+            }
 
-          updateData["rollNos"] = {username: "1"};
-          transaction.set(attendanceRef, updateData, SetOptions(merge: true));
-        });
+            updateData["rollNos"] = {username: "1"};
+            transaction.set(attendanceRef, updateData, SetOptions(merge: true));
+          });
 
-        disp.toast("Attendance marked successfully!");
+          disp.toast("Attendance marked successfully!");
+        } else {
+          disp.toast("Proxy Try Detected");
+        }
       } else {
         disp.toast("Time's up");
       }
     } else {
       disp.toast("Incorrect Code");
     }
+  }
+
+  Future<void> alwaysChecks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    username = prefs.getString("username");
+
+    var now = DateTime.now();
+    var formatter = DateFormat('yyyy-MM-dd');
+    String formattedDate = formatter.format(now);
+
+    var db = firestore
+        .collection("attendance")
+        .doc(widget.branch)
+        .collection(widget.sem!)
+        .doc(widget.div)
+        .collection(widget.subject!)
+        .doc(formattedDate);
+
+    db.snapshots().listen((DocumentSnapshot snapshot) {
+      if (snapshot.exists) {
+        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+        List<String> rollNos = [];
+        if (data.containsKey("rollNos")) {
+          Map<String, dynamic> rollNosMap = data['rollNos'];
+          rollNos = rollNosMap.keys.toList();
+
+          if (data.containsKey("question")) {
+            for (int i = 0; i < rollNos.length; i++) {
+              if (username == rollNos[i]) ;
+              prefs.setString(formattedDate, widget.subject!);
+              prefs.setString("1$formattedDate", data["question"]);
+              break;
+            }
+          }
+        }
+      } else {
+        print('Document does not exist');
+      }
+    }, onError: (error) {
+      print("Error fetching document: $error");
+    });
+  }
+
+  void _onFocusChanged() {
+    setState(() {
+      isOutFocus = false;
+    });
+
+    focusNode.removeListener(_onFocusChanged);
   }
 }

@@ -9,6 +9,7 @@ import '../../../constants.dart';
 import '../staff/staff_attendance_page.dart';
 import '../staff/staff_quiz_page.dart';
 import '../staff/staff_report_page.dart';
+import '../student/student_quiz_page.dart';
 
 
 class StudentHomeScreen extends StatefulWidget {
@@ -32,7 +33,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           children: [
             (_page == 0)
                 ? StudentAttendancePage()
-                : ((_page == 1) ? StaffQuiz() : StudentProfilePage())
+                : ((_page == 1) ? StudentQuizPage() : StudentProfilePage())
           ],
         ),
       ),
